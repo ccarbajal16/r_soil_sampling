@@ -3,6 +3,7 @@ library(terra)
 library(sf)
 library(sp)
 library(clhs)
+library(raster)
 
 # List of raster file names
 files_raster <- c("Aspect_mantaro.tif",  "Costo_acumulado_mantaro.tif", "nasadem_altomantaro.tif", 
@@ -39,7 +40,7 @@ points(s[subset.idx, ], col = 'red', pch=21)
 sf::st_write(s[subset.idx, ], "outputs/clhs_mantaro_points.shp")
 
 
-### Buffer analysis ###
+### Similarity Buffer analysis ###
 
 # Convert terra rasters to data.frame
 df_raster <- as.data.frame(r.stack, xy = TRUE)
@@ -47,14 +48,25 @@ df_raster <- as.data.frame(r.stack, xy = TRUE)
 # Convert data frame to SpatialPointsDataFrame
 coordinates(df_raster) <- c("x", "y")
 
-r <- raster(extent(df_raster), res = 0.01)
+# Load the raster layer
+rast_layer <- raster("data/nasadem_altomantaro.tif")
 
-# Create a raster stack from the SpatialPointsDataFrame
-r.stack <- stack(rasterize(df_raster, r, df_raster$cost), rasterize(df_raster, r, df_raster$aspect))
+# Create a raster template
+r <- raster(extent(rast_layer), res = 0.0002777778, crs = crs(rast_layer)) 
 
+# Create a raster stack using a loop
+r.stack <- stack() # Initialize an empty raster stack
+
+# Loop through each variable in the SpatialPointsDataFrame
+for (i in 1:ncol(df_raster@data)) {
+  # Rasterize each variable
+  layer <- rasterize(df_raster, r, df_raster@data[, i], fun = mean)  # Use mean for aggregation
+  names(layer) <- names(df_raster@data)[i]
+  r.stack <- stack(r.stack, layer)
+}
 
 # Calculate the Gower similarity index between the raster stack and the sampled data from the CLHS analysis, with a buffer of 250
 gw_cuenca <- similarity_buffer(r.stack, s.clhs$sampled_data, buffer = 250)
 
 # Save the buffer results as a GeoTIFF named 'list_buffer.tif' in the 'outputs_mantaro' directory
-terra::writeRaster(gw_cuenca, "outputs_mantaro/list_buffer.tif")
+terra::writeRaster(gw_cuenca, "outputs/list_buffer.tif")
