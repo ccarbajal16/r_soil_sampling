@@ -16,22 +16,13 @@ names(r.stack) <- c('aspect', 'cost', 'dem', 'slope', 'tmed', 'tpi', 'tsavi')
 
 # Create a regular grid of points on top of our raster stack
 set.seed(5)
-s <- init(r.stack, fun= runif)
+s <- spatSample(r.stack, size= 12000, method = "regular", xy = TRUE)
 
 # Filter out the points with missing values in the 'cost' attribute
 s <- s[!is.na(s$cost), ]
 
-# Extract coordinates from the raster stack
-coords <- xyFromCell(r.stack, 1:ncell(r.stack))
-
-# Combine coordinates and values
-s_df <- cbind(coords, s)
-
-# Combine coordinates and values (as data.frame)
-s_df <- data.frame(coords, s) # Convert to data.frame
-
 # Create a spatial points data frame
-s_spdf <- SpatialPointsDataFrame(coords = s_df[, 1:2], data = s_df[, 3:ncol(s_df)])
+s_spdf <- SpatialPointsDataFrame(coords = s[, 1:2], data = s[, 3:ncol(s)])
 
 # The cost surface is activated through the 'cost' argument
 s.clhs <- clhs(s_spdf, size = 120, progress = FALSE, iter = 2000, cost = 'cost', simple = FALSE)
