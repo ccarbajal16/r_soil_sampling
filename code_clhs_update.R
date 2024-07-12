@@ -37,7 +37,7 @@ terra::contour(r.stack$cost, nlevels=10, col='#1a1818', add=TRUE)
 points(s[subset.idx, ], col = 'red', pch=21)
 
 # Save the selected points as an ESRI Shapefile named 'clhs_mantaro_points' in the 'outputs_mantaro' directory
-sf::st_write(s[subset.idx, ], "outputs/clhs_mantaro_points.shp")
+st_write(s[subset.idx, ], "outputs/clhs_mantaro_points.csv")
 
 
 ### Similarity Buffer analysis ###
