@@ -38,6 +38,21 @@ points(s[subset.idx, ], col = 'red', pch=21)
 # Save the selected points as an ESRI Shapefile named 'clhs_mantaro_points' in the 'outputs_mantaro' directory
 sf::st_write(s[subset.idx, ], "outputs/clhs_mantaro_points.shp")
 
+
+### Buffer analysis ###
+
+# Convert terra rasters to data.frame
+df_raster <- as.data.frame(r.stack, xy = TRUE)
+
+# Convert data frame to SpatialPointsDataFrame
+coordinates(df_raster) <- c("x", "y")
+
+r <- raster(extent(df_raster), res = 0.01)
+
+# Create a raster stack from the SpatialPointsDataFrame
+r.stack <- stack(rasterize(df_raster, r, df_raster$cost), rasterize(df_raster, r, df_raster$aspect))
+
+
 # Calculate the Gower similarity index between the raster stack and the sampled data from the CLHS analysis, with a buffer of 250
 gw_cuenca <- similarity_buffer(r.stack, s.clhs$sampled_data, buffer = 250)
 
