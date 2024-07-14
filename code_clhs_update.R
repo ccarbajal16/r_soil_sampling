@@ -6,8 +6,8 @@ library(clhs)
 library(raster)
 
 # List of raster file names
-files_raster <- c("Aspect_mantaro.tif",  "Costo_acumulado_mantaro.tif", "nasadem_altomantaro.tif", 
-                "Slope_mantaro.tif", "tmed_mantaro_down.tif", "TPI_mantaro.tif", "TSAVI_mantaro.tif")
+files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "nasadem_basin.tif", 
+                "slope_basin.tif", "tmed_basin.tif", "tpi_basintif", "tsavi_basin.tif")
 
 # Create a stack of rasters
 r.stack <- rast(paste0("data/", files_raster))
