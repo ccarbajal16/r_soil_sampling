@@ -36,7 +36,7 @@ terra::plot(r.stack$dem, axes=TRUE, legend=TRUE)
 terra::contour(r.stack$cost, nlevels=10, col='#464343', add=TRUE)
 points(s[subset.idx, ], col = '#FF00C8', pch=16, cex = 1.5)
 
-# Save the selected points as an ESRI Shapefile named 'clhs_mantaro_points' in the 'outputs_mantaro' directory
+# Save the selected points as a CSV 
 st_write(s[subset.idx, ], "outputs/clhs_points.csv")
 
 
