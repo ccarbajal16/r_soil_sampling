@@ -6,7 +6,7 @@ library(clhs)
 library(raster)
 
 # List of raster file names
-files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "nasadem_basin.tif", 
+files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "dem_basin.tif", 
                 "slope_basin.tif", "tpi_basin.tif", "tri_basin.tif")
 
 # Create a stack of rasters
