@@ -4,6 +4,7 @@ library(sf)
 library(sp)
 library(clhs)
 library(raster)
+library(tidyverse)
 
 # List of raster file names
 files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "dem_basin.tif", 
@@ -13,7 +14,7 @@ files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "dem_basin.tif",
 r.stack <- rast(paste0("data/", files_raster))
 
 # Assign names to the layers of the stack
-names(r.stack) <- c('aspect', 'cost', 'dem', 'slope', 'tmed', 'tpi', 'tsavi')
+names(r.stack) <- c('aspect', 'cost', 'dem', 'slope', 'tpi', 'tri')
 
 # Create a regular grid of points on top of our raster stack
 set.seed(5)
@@ -37,8 +38,20 @@ terra::contour(r.stack$cost, nlevels=10, col='#464343', add=TRUE)
 points(s[subset.idx, ], col = '#FF00C8', pch=16, cex = 1.5)
 
 # Save the selected points as a CSV 
-st_write(s[subset.idx, ], "outputs/clhs_points.csv")
+st_write(s[subset.idx, ], "outputs/clhs_points_basin.csv")
 
+# Filter selected points
+points <- read_csv("outputs/clhs_points_basin.csv")
+
+points_filtered <- points |>
+    mutate(accessibility = case_when(
+        cost > 1.5 ~ "less accessible",
+        cost <= 1.5 ~ "more accessible"
+    ), ID = seq(1, length(points$cost), 1)) |> 
+    select (ID,x, y, dem, cost, accessibility)
+
+# Save the filtered points as a CSV 
+st_write(points_filtered, "outputs/clhs_points_filter.csv")
 
 ### Similarity Buffer analysis ###
 
