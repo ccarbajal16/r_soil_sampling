@@ -7,7 +7,7 @@ library(raster)
 
 # List of raster file names
 files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "nasadem_basin.tif", 
-                "slope_basin.tif", "tmed_basin.tif", "tpi_basin.tif", "tsavi_basin.tif")
+                "slope_basin.tif", "tpi_basin.tif", "tri_basin.tif")
 
 # Create a stack of rasters
 r.stack <- rast(paste0("data/", files_raster))
