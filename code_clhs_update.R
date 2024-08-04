@@ -5,6 +5,7 @@ library(sp)
 library(clhs)
 library(raster)
 library(tidyverse)
+library(tmap)
 
 # List of raster file names
 files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "dem_basin.tif", 
@@ -52,6 +53,35 @@ points_filtered <- points |>
 
 # Save the filtered points as a CSV 
 st_write(points_filtered, "outputs/clhs_points_filter.csv")
+
+
+# Plot the filtered points
+
+# Assuming your points data frame has columns named "x" and "y"
+points_sf <- st_as_sf(points_filtered, 
+                       coords = c("x", "y"), # Specify coordinate columns
+                       crs = 4326)
+
+map_clhs <-  tm_shape(dem) + tm_raster(col = "dem_basin_alos", 
+    title = "Elevation (m)", palette = "terrain") +
+    tm_layout(
+    legend.position = c("right", "bottom"),  # Position inside, right-center
+    legend.inside = TRUE,
+    frame = TRUE,                   # Add a frame around the map
+    frame.lwd = 2,                   # Frame line width
+    inner.margins = c(0.1, 0.1, 0.1, 0.1), # Adjust inner margins if needed
+    ) +
+    tm_graticules(lwd = 0.5, col = "grey", alpha = 0.5) +
+    tm_compass(type = "8star", position = c("left", "top")) +
+    tm_scale_bar(position = c("left", "bottom")) +
+    tm_shape(pol_sf) +
+    tm_polygons(fill = "blue", fill_alpha = 0.1, lwd = 4) +
+    tm_shape(points_sf) + tm_symbols(col = "accessibility", 
+    style = "quantile", palette = "Greens") + 
+    tm_text(text = "ID", ymod = 0.6)
+
+map_clhs
+
 
 ### Similarity Buffer analysis ###
 
