@@ -1,0 +1,194 @@
+---
+title: "Download L8 images"
+author: Carlos Carbajal
+date: now
+format: 
+    html:
+        toc: true
+        toc-location: left
+        toc-title: Contents
+        code-fold: true
+        embed-resources: true
+jupyter: python3
+---
+
+```{python}
+#importing Earth Engine packages
+import geemap
+import ee 
+ee.Authenticate()  #every person needs an Earth Engine account to do this part
+ee.Initialize()
+```
+
+
+```{python}
+# Define your region of interest (ROI) using a bounding box
+bbox = [-75.48982205, -11.76272066, -75.31404879, -11.63281368]
+geometry = ee.Geometry.Rectangle(bbox)
+```	
+
+```{python}
+dataset = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2').filterDate(
+    '2024-07-01', '2024-07-31').filterBounds(geometry)
+```
+
+
+```{python}
+# Function to mask clouds using the QA_PIXEL band
+def mask_clouds(image):
+    qa = image.select('QA_PIXEL')
+    cloud = qa.bitwiseAnd(1 << 3).Or(qa.bitwiseAnd(1 << 5))
+    return image.updateMask(cloud.Not())
+```
+
+```{python}
+# Applies scaling factors.
+def apply_scale_factors(image):
+  optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
+  thermal_bands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
+  return image.addBands(optical_bands, None, True).addBands(
+      thermal_bands, None, True
+  )
+```
+
+```{python}
+# Apply cloud masking to the collection
+dataset = dataset.map(mask_clouds)
+
+# Define the function to apply the scale factors
+dataset = dataset.map(apply_scale_factors)
+```
+
+```{python}
+# Select the bands (example: Blue, Green, Red, NIR, SWIR1, SWIR2, Thermal)
+dataset = dataset.select(['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7', 'ST_B10'])
+```
+
+
+```{python}	
+# Define a visualization parameters dictionary for display
+visualization = {
+    'bands': ['SR_B4', 'SR_B3', 'SR_B2'],
+    'min': 0,
+    'max': 0.3,  # Adjust these values based on your data
+}
+```	
+
+```{python}	
+# Create a map centered on your geometry
+Map = geemap.Map()
+Map.centerObject(geometry, zoom=12) 
+
+# Add the image collection to the map
+Map.addLayer(dataset.median(), visualization, 'Landsat 8')
+
+Map
+```
+
+
+```{python}
+# Function to calculate NDVI and SAVI
+def calculate_indices(image):
+    ndvi = image.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
+    savi = image.expression(
+        '(1 + L) * (NIR - RED) / (NIR + RED + L)',
+        {
+            'NIR': image.select('SR_B5'),
+            'RED': image.select('SR_B4'),
+            'L': 0.5  # Adjust L factor for SAVI if needed
+        }
+    ).rename('SAVI')
+    return image.addBands([ndvi, savi])
+```	
+
+```{python}
+# Apply the function to the collection
+dataset_indices = dataset.map(calculate_indices)
+```
+
+```{python}
+# Download the images 
+geemap.ee_export_image_collection(
+    dataset_indices,
+    scale=30, # Set the desired spatial resolution (meters)
+    region=geometry,
+    file_per_band=False, # Set to True if you want separate files per band
+    out_dir= 'outputs/', # Set the output directory
+)
+```	
+
+```{r}
+library(sf)
+library(terra)
+library(tmap)
+
+# Define your area of interest (AOI)
+pol_sf <- st_read(
+  dsn = "data/basin_mantaro.gpkg",
+  layer = "basin_mantaro"
+)
+```
+
+```{r}
+#| warning: false
+#| label: crop-NDVI layer 
+
+landsat_img <- rast("outputs/LC08_006068_20240709.tif")
+
+polygon_crs <- crs(pol_sf)
+
+reproj_landsat <- project(landsat_img, polygon_crs)
+
+# Crop the Landsat image using the polygon**
+cropped_landsat <- crop(reproj_landsat, pol_sf)
+```
+
+
+```{r}
+#| warning: false	
+
+# Mask the cropped raster using the polygon
+masked_landsat <- mask(cropped_landsat, pol_sf) 
+```	
+
+
+```{r}
+# Extract NDVI (band 8) and SAVI (band 9) as separate rasters
+ndvi <- masked_landsat[[8]]  # Extract band 8 (NDVI)
+savi <- masked_landsat[[9]]  # Extract band 9 (SAVI)
+```	
+
+```{r}	
+# Check the band names
+names(ndvi) <- "NDVI"  # Rename if necessary
+names(savi) <- "SAVI"  # Rename if necessary
+```
+
+
+```{r}
+# Define your desired breaks for the NDVI values
+breaks <- c(-Inf, 0, 0.2, 0.4, 0.6, 0.8, 1) 
+
+tm_shape(savi) + 
+    tm_raster(
+        col= "SAVI",
+        breaks = breaks, 
+        palette = "viridis",
+        title = "SAVI"
+        ) +
+    tm_layout(
+    legend.position = c("right", "bottom"),  # Position inside, right-center
+    legend.inside = TRUE,
+    frame = TRUE,                   # Add a frame around the map
+    frame.lwd = 2,                   # Frame line width
+    inner.margins = c(0.1, 0.1, 0.1, 0.1), # Adjust inner margins if needed
+    ) +
+    tm_graticules(lwd = 0.5, col = "grey", alpha = 0.5) +
+    tm_compass(type = "8star", position = c("left", "top")) +
+    tm_scale_bar(position = c("left", "bottom"))                  
+```
+
+```{r}
+writeRaster(ndvi, "data/ndvi_basin.tif", overwrite = TRUE)
+writeRaster(savi, "data/savi_basin.tif", overwrite = TRUE)	
+```	
