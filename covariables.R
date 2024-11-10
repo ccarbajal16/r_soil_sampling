@@ -1,64 +1,108 @@
 # Load required packages
-library(terra)
-library(gdistance)
-library(elevatr)
-library(sf)
+required_packages <- c("terra", "gdistance", "elevatr", "sf")
+for (pkg in required_packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+    library(pkg, character.only = TRUE)
+  }
+}
 
-# Define your area of interest (AOI)
-pol_sf <- st_read(
-  dsn = "data/basin_mantaro.gpkg",
-  layer = "basin_mantaro"
-)
+# Error handling function
+handle_error <- function(expr) {
+  tryCatch(
+    expr,
+    error = function(e) {
+      message("Error: ", e$message)
+      return(NULL)
+    }
+  )
+}
 
-# Download the DEM data
-dem <- get_elev_raster(pol_sf, z = 10, src = "aws", clip = "locations")
+# Progress message function
+show_progress <- function(msg) {
+  message(paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg))
+}
 
-# Access API key from opentopography account and then run: set_opentopo_key()
-#dem_srtm <- get_elev_raster(pol_sf, src = "gl1", clip = "locations")
-#dem_alos <- get_elev_raster(pol_sf, src = "alos", clip = "locations")
+main <- function() {
+  show_progress("Starting terrain analysis...")
+  
+  # Define area of interest (AOI)
+  aoi_path <- "data/basin_mantaro.gpkg"
+  if (!file.exists(aoi_path)) {
+    stop("AOI file not found: ", aoi_path)
+  }
+  
+  pol_sf <- handle_error(
+    st_read(dsn = aoi_path, layer = "basin_mantaro", quiet = TRUE)
+  )
+  if (is.null(pol_sf)) stop("Failed to read AOI file")
+  
+  # Download and save DEM
+  show_progress("Downloading DEM data...")
+  dem <- handle_error(
+    get_elev_raster(pol_sf, z = 10, src = "aws", clip = "locations")
+  )
+  if (is.null(dem)) stop("Failed to download DEM")
+  
+  dem_path <- "data/dem_basin.tif"
+  writeRaster(dem, dem_path, overwrite = TRUE)
+  rm(dem) # Clean up memory
+  gc()
+  
+  # Process terrain variables using terra
+  show_progress("Processing terrain variables...")
+  dem <- rast(dem_path)
+  
+  # Calculate terrain variables
+  terrain_vars <- list(
+    slope = list(name = "slope", unit = "radians"),
+    aspect = list(name = "aspect", unit = "radians"),
+    tpi = list(name = "TPI", unit = NULL),
+    tri = list(name = "TRI", unit = NULL)
+  )
+  
+  for (var in names(terrain_vars)) {
+    show_progress(paste("Calculating", var))
+    result <- terrain(
+      dem, 
+      v = terrain_vars[[var]]$name, 
+      unit = terrain_vars[[var]]$unit
+    )
+    writeRaster(
+      result,
+      filename = paste0("data/", var, "_basin.tif"),
+      overwrite = TRUE
+    )
+    rm(result)
+    gc()
+  }
+  
+  # Calculate accumulated cost surface
+  show_progress("Calculating accumulated cost surface...")
+  dem_r <- raster(dem_path) # Convert to raster for gdistance compatibility
+  
+  # Create and correct transition layer
+  cost_transition <- handle_error({
+    trans <- transition(dem_r, transitionFunction = mean, directions = 8)
+    geoCorrection(trans)
+  })
+  if (is.null(cost_transition)) stop("Failed to create cost transition layer")
+  
+  # Calculate accumulated cost
+  start_point <- c(x = -75.4447, y = -11.7356)
+  accumulated_cost <- handle_error(
+    accCost(cost_transition, start_point)
+  )
+  if (is.null(accumulated_cost)) stop("Failed to calculate accumulated cost")
+  
+  writeRaster(accumulated_cost, "data/cost_basin.tif", overwrite = TRUE)
+  
+  show_progress("Terrain analysis completed successfully!")
+  
+  # Clean up
+  rm(list = ls())
+  gc()
+}
 
-writeRaster(dem, "data/dem_basin.tif", overwrite = TRUE)
-
-# Create a raster object with terra package
-dem <- rast("data/dem_basin.tif")
-
-# Calculate slope
-slope <- terrain(dem, v = "slope", unit = "radians") 
-
-# Calculate aspect
-aspect <- terrain(dem, v = "aspect", unit = "radians") 
-
-# Calculate TPI (Topographic Position Index)
-tpi <- terrain(dem, v = "TPI")
-
-# Calculate TRI (Terrain Ruggeedness Index)
-tri <- terrain(dem, v = "TRI")
-
-# Save the derived layers
-writeRaster(slope, filename = "data/slope_basin.tif", overwrite = TRUE)
-writeRaster(aspect, filename = "data/aspect_basin.tif", overwrite = TRUE)
-writeRaster(tpi, filename = "data/tpi_basin.tif", overwrite = TRUE)
-writeRaster(tri, filename = "data/tri_basin.tif", overwrite = TRUE)
-
-
-# Calculate the accumulated cost surface layer
-
-library(raster)
-
-dem_r <- raster("data/dem_basin.tif")
-
-# Create a transition layer based on the cost raster
-cost_transition <- transition(dem_r, transitionFunction = mean, directions = 8)
-
-# Correct the transition layer for accurate distance calculations
-cost_transition <- geoCorrection(cost_transition)
-
-# Define the start point coordinates
-start_point <- c(x = -75.4447, y = -11.7356)
-
-# Accumulated cost surface
-accumulated_cost <- accCost(cost_transition, start_point)
-
-# Export raster
-writeRaster(accumulated_cost, "data/cost_basin.tif", overwrite = TRUE)
-
+# Execute main function with error handling
+handle_error(main())
