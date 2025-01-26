@@ -1,5 +1,4 @@
 # Load the required packages:
-
 library(sf)       # Simple Features data structures
 library(units)
 library(sp)        # spcosa uses `sp` data structures
@@ -7,7 +6,7 @@ library(rJava)     # required by spcosa
 library(spcosa)    # the "spatial coverage sampling" package
 library(ggplot2)   # graphics
 library(tmap)
-```
+
 # Load the polygon (AOI) and transform it to EPSG:32718
 poly_ws <- st_read("./data/basin_mantaro.gpkg")
 poly_ws <- st_transform(poly_ws, 32718)
