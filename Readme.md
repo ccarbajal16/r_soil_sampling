@@ -2,4 +2,4 @@ This repository demonstrates soil sampling methods in R. It includes scripts for
 
 ![](./outputs/clhs_export.png)
 
-![](./outputs/spatial_coverage.jpg)
+![](./outputs/spatial_coverage.png)
