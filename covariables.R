@@ -1,11 +1,8 @@
 # Load required packages
-required_packages <- c("terra", "gdistance", "elevatr", "sf")
-for (pkg in required_packages) {
-  if (!require(pkg, character.only = TRUE)) {
-    install.packages(pkg)
-    library(pkg, character.only = TRUE)
-  }
-}
+library(terra)
+library(gdistance)
+library(elevatr)
+library(sf)
 
 # Error handling function
 handle_error <- function(expr) {
