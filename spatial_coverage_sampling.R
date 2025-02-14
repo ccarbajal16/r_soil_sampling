@@ -17,7 +17,14 @@ area_poly
 
 # Plot the polygon
 map_ws <- tm_shape(poly_ws) +
-    tm_polygons(fill = "grey", fill_alpha = 0.5, lwd = 4) +
+    tm_polygons(
+        fill = "blue",          # Fill color
+        fill_alpha = 0.7,       # Fill transparency
+        border.col = "black",   # Border color
+        border.alpha = 0.8,     # Border transparency
+        lwd = 2,                # Border line width
+        lty = "dashed"          # Border line type
+    ) +
     tm_graticules(lwd = 0.5, col = "grey", alpha = 0.5) +
     tm_compass(type = "8star", position = c("left", "top"))
 
