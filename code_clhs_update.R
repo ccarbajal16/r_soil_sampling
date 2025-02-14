@@ -1,11 +1,11 @@
 # Load required packages
-library(terra)
-library(sf)
-library(sp)
-library(clhs)
-library(raster)
-library(tidyverse)
-library(tmap)
+library(terra) # For working with raster data
+library(sf) # For working with spatial data
+library(sp) # For working with spatial data
+library(clhs) # For the CLHS algorithm
+library(raster) # For working with raster data
+library(tidyverse) # For data manipulation
+library(tmap) # For creating thematic maps
 
 # List of raster file names
 files_raster <- c("aspect_basin.tif",  "cost_basin.tif", "dem_basin.tif", 
