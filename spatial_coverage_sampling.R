@@ -3,6 +3,7 @@ library(sf)       # Simple Features data structures
 library(units)
 library(sp)        # spcosa uses `sp` data structures
 library(rJava)     # required by spcosa
+library(terra)     
 library(spcosa)    # the "spatial coverage sampling" package
 library(ggplot2)   # graphics
 library(tmap)
@@ -18,7 +19,7 @@ area_poly
 # Plot the polygon
 map_ws <- tm_shape(poly_ws) +
     tm_polygons(
-        fill = "blue",          # Fill color
+        fill = "grey80",          # Fill color
         fill_alpha = 0.7,       # Fill transparency
         border.col = "black",   # Border color
         border.alpha = 0.8,     # Border transparency
